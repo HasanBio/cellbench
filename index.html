@@ -1,0 +1,911 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta charset="utf-8">
+<title>CellBench</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="CellBench">
+<meta name="theme-color" content="#2B45C7">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root{
+  color-scheme:light;
+  --bg:#F2F4F8; --surface:#FFFFFF; --surface2:#E9EDF5; --ink:#121A33; --muted:#5B6584; --line:#D5DBE8;
+  --accent:#2B45C7; --accent-ink:#FFFFFF; --accent-soft:#E7EBFB;
+  --live:#178A5B; --live-ink:#FFFFFF; --dead:#3B2D8F; --dead-ink:#FFFFFF;
+  --warn:#B4661A; --warn-ink:#6B3A08; --crit:#B7312C; --crit-ink:#6E1613; --good:#178A5B; --good-ink:#0D5236;
+  --shadow:0 1px 2px rgba(18,26,51,.10);
+  --display:"Bricolage Grotesque","Avenir Next","Helvetica Neue",Arial,sans-serif;
+  --body:"IBM Plex Sans",-apple-system,"Segoe UI",Roboto,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --bg:#0E1322; --surface:#171E33; --surface2:#222B46; --ink:#E9EDF7; --muted:#9BA6C6; --line:#2C3552;
+    --accent:#7F94FF; --accent-ink:#0B1030; --accent-soft:#1B2447;
+    --live:#3FCB8E; --live-ink:#06301D; --dead:#A79BFF; --dead-ink:#160F3F;
+    --warn:#E8A04A; --warn-ink:#FFD9A8; --crit:#F07068; --crit-ink:#FFC4C0; --good:#3FCB8E; --good-ink:#BDF3DB;
+    --shadow:0 1px 2px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --bg:#0E1322; --surface:#171E33; --surface2:#222B46; --ink:#E9EDF7; --muted:#9BA6C6; --line:#2C3552;
+  --accent:#7F94FF; --accent-ink:#0B1030; --accent-soft:#1B2447;
+  --live:#3FCB8E; --live-ink:#06301D; --dead:#A79BFF; --dead-ink:#160F3F;
+  --warn:#E8A04A; --warn-ink:#FFD9A8; --crit:#F07068; --crit-ink:#FFC4C0; --good:#3FCB8E; --good-ink:#BDF3DB;
+  --shadow:0 1px 2px rgba(0,0,0,.4);
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.45 var(--body);-webkit-text-size-adjust:100%;padding-bottom:calc(76px + env(safe-area-inset-bottom));overscroll-behavior-y:none}
+button{font-family:inherit;cursor:pointer;-webkit-tap-highlight-color:transparent}
+button:focus-visible,input:focus-visible,select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.app{max-width:600px;margin:0 auto;padding:0 16px}
+header.top{position:sticky;top:0;z-index:5;background:var(--bg);padding:calc(10px + env(safe-area-inset-top)) 0 8px;display:flex;align-items:center;justify-content:space-between;border-bottom:1px solid var(--line)}
+.brand{display:flex;align-items:center;gap:10px;font-family:var(--display);font-weight:700;font-size:22px;letter-spacing:-.01em}
+.brand svg{width:28px;height:28px;flex:none}
+.brand span small{display:block;font:400 11px/1.2 var(--body);color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
+.hdr-right{font:500 12px var(--mono);color:var(--muted)}
+.page{display:none;padding-top:12px}
+.page.active{display:block}
+h2.ph{font-family:var(--display);font-size:26px;font-weight:700;margin:6px 0 2px;text-wrap:balance;letter-spacing:-.015em;line-height:1.1}
+.lede{color:var(--muted);margin:0 0 14px;font-size:14px;max-width:60ch}
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:4px 14px 10px;margin:0 0 14px;box-shadow:var(--shadow)}
+.sec h3{font:600 12px/1 var(--body);text-transform:uppercase;letter-spacing:.09em;color:var(--muted);margin:12px 0 4px}
+.field{display:grid;grid-template-columns:minmax(0,1fr) 10.5rem;gap:10px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.field:last-child{border-bottom:0}
+.field.wide{grid-template-columns:1fr}
+.field label{font-size:15px;font-weight:500;line-height:1.3}
+.field .hint{display:block;font-size:12px;color:var(--muted);font-weight:400;margin-top:1px}
+.inp{display:flex;align-items:center;background:var(--surface2);border:1px solid transparent;border-radius:10px;height:42px;overflow:hidden}
+.inp:focus-within{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 22%,transparent)}
+.inp input,.inp select{flex:1;min-width:0;border:0;background:transparent;color:var(--ink);font:500 17px/1 var(--mono);padding:0 10px;height:100%;outline:none;text-align:right;font-variant-numeric:tabular-nums;border-radius:0}
+.inp input::placeholder{color:var(--muted);opacity:.7}
+.inp select{font:500 14px var(--body);text-align:left;appearance:none;-webkit-appearance:none;padding-right:26px;background-image:linear-gradient(45deg,transparent 50%,var(--muted) 50%),linear-gradient(135deg,var(--muted) 50%,transparent 50%);background-position:calc(100% - 15px) 50%,calc(100% - 10px) 50%;background-size:5px 5px,5px 5px;background-repeat:no-repeat}
+.inp .u{font-size:12px;color:var(--muted);padding:0 10px 0 0;white-space:nowrap}
+.inp select.usel{flex:0 0 auto;width:auto;font:500 12px var(--body);color:var(--muted);padding:0 22px 0 6px;text-align:right;border-left:1px solid var(--line);height:70%;align-self:center;background-position:calc(100% - 11px) 50%,calc(100% - 6px) 50%;background-size:5px 5px,5px 5px}
+.inp.solve{border-color:color-mix(in srgb,var(--accent) 60%,transparent);background:var(--accent-soft)}
+.seg{display:flex;background:var(--surface2);border-radius:10px;padding:3px;gap:3px;margin:8px 0 2px}
+.seg button{flex:1;border:0;background:transparent;color:var(--muted);font:500 13px var(--body);padding:8px 6px;border-radius:8px;line-height:1.2}
+.seg button[aria-pressed="true"]{background:var(--surface);color:var(--ink);box-shadow:var(--shadow)}
+.result{background:var(--accent-soft);border-radius:14px;padding:14px 16px;margin:0 0 14px;border:1px solid color-mix(in srgb,var(--accent) 28%,transparent)}
+.r-label{font-size:12px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.r-primary{font-family:var(--display);font-size:34px;font-weight:700;line-height:1.1;letter-spacing:-.02em;margin:4px 0 0;font-variant-numeric:tabular-nums;overflow-wrap:anywhere}
+.r-primary small{font-size:15px;font-weight:500;color:var(--muted);margin-left:6px;font-family:var(--body);letter-spacing:0}
+.r-sub{font:13px var(--mono);color:var(--muted);margin-top:3px}
+.rows{margin:12px 0 0}
+.rows div{display:flex;justify-content:space-between;gap:12px;padding:6px 0;border-top:1px dashed color-mix(in srgb,var(--accent) 30%,var(--line));font-size:14px}
+.rows div span{color:var(--ink)}
+.rows div b{font:500 14px var(--mono);text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+.rows div.h{font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.08em;color:var(--muted);border-top:0;padding-top:10px;padding-bottom:2px}
+.note{margin-top:10px;padding:8px 10px;border-radius:8px;font-size:13px;line-height:1.4;background:color-mix(in srgb,var(--warn) 14%,transparent);color:var(--warn-ink);border-left:3px solid var(--warn)}
+.note.crit{background:color-mix(in srgb,var(--crit) 14%,transparent);color:var(--crit-ink);border-left-color:var(--crit)}
+.note.good{background:color-mix(in srgb,var(--good) 14%,transparent);color:var(--good-ink);border-left-color:var(--good)}
+.note.info{background:color-mix(in srgb,var(--accent) 10%,transparent);color:var(--ink);border-left-color:var(--accent)}
+.actions{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
+.btn{border:1px solid var(--line);background:var(--surface);color:var(--ink);font:500 13px var(--body);padding:8px 12px;border-radius:9px;line-height:1.2}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:transparent}
+.btn.ghost{background:transparent}
+.btn.danger{color:var(--crit);border-color:color-mix(in srgb,var(--crit) 40%,transparent)}
+.btn:active{transform:translateY(1px)}
+nav.tabs{position:fixed;left:0;right:0;bottom:0;background:var(--surface);border-top:1px solid var(--line);display:flex;justify-content:center;padding-bottom:env(safe-area-inset-bottom);z-index:10}
+nav.tabs .wrap{display:flex;width:100%;max-width:600px}
+nav.tabs button{flex:1;border:0;background:transparent;color:var(--muted);padding:8px 0 7px;font:500 11px var(--body);display:flex;flex-direction:column;align-items:center;gap:3px}
+nav.tabs button svg{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+nav.tabs button[aria-current="page"]{color:var(--accent)}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tile{display:flex;flex-direction:column;gap:4px;text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px;color:var(--ink);box-shadow:var(--shadow)}
+.tile b{font-family:var(--display);font-weight:700;font-size:17px;letter-spacing:-.01em}
+.tile span{font-size:12px;color:var(--muted);line-height:1.35}
+.back{border:0;background:transparent;color:var(--accent);font:500 14px var(--body);padding:4px 0;margin:2px 0 0;display:inline-flex;align-items:center;gap:4px}
+table.tbl{width:100%;border-collapse:collapse;font-size:13px}
+table.tbl th{font:600 11px var(--body);text-transform:uppercase;letter-spacing:.07em;color:var(--muted);text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+table.tbl td{padding:8px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+table.tbl td.n{font-family:var(--mono);text-align:right;white-space:nowrap}
+table.tbl th.n{text-align:right}
+table.tbl tr:last-child td{border-bottom:0}
+.scroll{overflow-x:auto}
+.tally{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:8px 0}
+.tally button{border:0;border-radius:18px;min-height:150px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;font-family:var(--display);font-weight:700;font-size:48px;letter-spacing:-.02em;font-variant-numeric:tabular-nums;user-select:none;-webkit-user-select:none;touch-action:manipulation}
+.tally button small{font:600 13px var(--body);text-transform:uppercase;letter-spacing:.1em;opacity:.85}
+.tally .live{background:var(--live);color:var(--live-ink)}
+.tally .dead{background:var(--dead);color:var(--dead-ink)}
+.tally button:active{filter:brightness(.92)}
+.tally-meta{display:flex;justify-content:space-between;align-items:center;gap:8px;font-size:14px;flex-wrap:wrap}
+.sqchips{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.sqchips span{font:500 12px var(--mono);padding:4px 8px;border-radius:999px;background:var(--surface2);color:var(--muted)}
+.sqchips span.cur{background:var(--accent);color:var(--accent-ink)}
+.log-item{padding:10px 0;border-bottom:1px solid var(--line)}
+.log-item:last-child{border-bottom:0}
+.log-item .t{font:500 11px var(--mono);color:var(--muted)}
+.log-item b{display:block;font-size:14px;margin:2px 0}
+.log-item pre{margin:4px 0 0;white-space:pre-wrap;font:12px/1.5 var(--mono);color:var(--ink)}
+.log-item .note-txt{font-size:13px;font-style:italic;color:var(--muted)}
+.log-item .actions{margin-top:6px}
+.install{background:var(--surface);border:1px dashed color-mix(in srgb,var(--accent) 50%,transparent);border-radius:12px;padding:10px 12px;margin:12px 0 0;font-size:13px;display:flex;gap:10px;align-items:flex-start}
+.install b{color:var(--accent)}
+.install button{margin-left:auto;flex:none}
+.rep-rows{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:8px 0}
+.rep-rows .inp{height:40px}
+.rep-rows .inp input{text-align:center;padding:0 4px}
+.rep-rows .inp .u{display:none}
+.chart{width:100%;height:auto;display:block;margin:10px 0 2px}
+.chart text{font:10px var(--mono);fill:var(--muted)}
+.kbd{font:500 12px var(--mono);background:var(--surface2);padding:1px 6px;border-radius:5px}
+.formula{font:13px/1.6 var(--mono);background:var(--surface2);padding:8px 10px;border-radius:8px;margin:6px 0 10px;overflow-x:auto;white-space:pre}
+.small{font-size:13px;color:var(--muted)}
+p.small{margin:6px 0}
+.toast{position:fixed;left:50%;bottom:calc(84px + env(safe-area-inset-bottom));transform:translateX(-50%) translateY(10px);background:var(--ink);color:var(--bg);font:500 13px var(--body);padding:9px 14px;border-radius:999px;opacity:0;transition:opacity .2s,transform .2s;pointer-events:none;z-index:20;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+@media (max-width:380px){.field{grid-template-columns:minmax(0,1fr) 9rem}.r-primary{font-size:29px}}
+</style>
+</head>
+<body>
+
+<div class="app">
+<header class="top">
+  <div class="brand">
+    <svg viewBox="0 0 28 28" aria-hidden="true"><rect x="1.5" y="1.5" width="25" height="25" rx="5" fill="var(--accent)"/><path d="M9.8 1.5v25M18.2 1.5v25M1.5 9.8h25M1.5 18.2h25" stroke="var(--accent-ink)" stroke-opacity=".45" stroke-width="1"/><circle cx="7" cy="7.2" r="2.3" fill="var(--accent-ink)"/><circle cx="20.5" cy="12.5" r="2.6" fill="var(--accent-ink)"/><circle cx="12" cy="20.6" r="2.3" fill="var(--accent-ink)"/><circle cx="22" cy="22" r="1.9" fill="var(--accent-ink)" fill-opacity=".45"/></svg>
+    <span>CellBench<small>cell count &amp; culture math</small></span>
+  </div>
+  <div class="hdr-right" id="hdrClock"></div>
+</header>
+
+<!-- ============ COUNT ============ -->
+<section class="page" id="page-count">
+  <h2 class="ph">Hemocytometer count</h2>
+  <p class="lede">Enter what you counted. Concentration, viability and total yield update as you type.</p>
+  <div class="result" id="res-count"></div>
+  <div class="sec">
+    <h3>Chamber</h3>
+    <div class="field"><label>Chamber type<span class="hint">Sets the volume over one large square</span></label>
+      <div class="inp"><select id="c_chamber">
+        <option value="0.1">Improved Neubauer</option>
+        <option value="0.1b">Bürker</option>
+        <option value="0.2">Fuchs-Rosenthal</option>
+        <option value="1.25">Nageotte</option>
+        <option value="custom">Custom</option></select></div></div>
+    <div class="field"><label>Volume per square<span class="hint">1 mm² × depth. Neubauer: 0.1 µL</span></label>
+      <div class="inp"><input id="c_vol" inputmode="decimal" value="0.1"><span class="u">µL</span></div></div>
+    <div class="field"><label>Squares counted<span class="hint">Large 1 mm² squares, both chambers combined</span></label>
+      <div class="inp"><input id="c_sq" inputmode="decimal" value="4"><span class="u">sq</span></div></div>
+  </div>
+  <div class="sec">
+    <h3>Cells counted (all squares)</h3>
+    <div class="field"><label>Live (unstained)</label>
+      <div class="inp"><input id="c_live" inputmode="numeric" value="212"><span class="u">cells</span></div></div>
+    <div class="field"><label>Dead (blue)</label>
+      <div class="inp"><input id="c_dead" inputmode="numeric" value="14"><span class="u">cells</span></div></div>
+    <div class="actions" style="margin-top:8px"><button class="btn" data-go="tally">Open tap counter</button><button class="btn" data-go="rep">Replicate squares</button></div>
+  </div>
+  <div class="sec">
+    <h3>Dilution before loading</h3>
+    <div class="field"><label>Sample volume<span class="hint">Cell suspension mixed with stain</span></label>
+      <div class="inp"><input id="c_s" inputmode="decimal" value="10"><span class="u">µL</span></div></div>
+    <div class="field"><label>Trypan blue / diluent</label>
+      <div class="inp"><input id="c_t" inputmode="decimal" value="10"><span class="u">µL</span></div></div>
+    <div class="field"><label>Extra pre-dilution<span class="hint">1 if none. 10 if you diluted 1:10 first</span></label>
+      <div class="inp"><input id="c_pre" inputmode="decimal" value="1"><span class="u">×</span></div></div>
+  </div>
+  <div class="sec">
+    <h3>Your suspension</h3>
+    <div class="field"><label>Suspension volume<span class="hint">Total volume the sample came from</span></label>
+      <div class="inp"><input id="c_susp" inputmode="decimal" value="10"><span class="u">mL</span></div></div>
+  </div>
+</section>
+
+<!-- ============ SEED ============ -->
+<section class="page" id="page-seed">
+  <h2 class="ph">Seeding &amp; plating</h2>
+  <p class="lede">How much suspension and medium per well, plus the master mix for the whole plate.</p>
+  <div class="result" id="res-seed"></div>
+  <div class="sec">
+    <h3>Stock suspension</h3>
+    <div class="field"><label>Viable concentration<span class="hint">From your count</span></label>
+      <div class="inp"><input id="s_c" inputmode="decimal" value="1.1"><select class="usel" id="s_cu"><option value="M">×10⁶/mL</option><option value="mL">cells/mL</option><option value="uL">cells/µL</option></select></div></div>
+    <div class="field"><label>Cells available<span class="hint">Optional. Total viable cells on hand</span></label>
+      <div class="inp"><input id="s_avail" inputmode="decimal" placeholder="—"><select class="usel" id="s_availu"><option value="M">×10⁶</option><option value="1">cells</option></select></div></div>
+    <div class="actions" style="margin-top:6px"><button class="btn" data-act="useCount">Use count result</button></div>
+  </div>
+  <div class="sec">
+    <h3>Vessel</h3>
+    <div class="field"><label>Plate or flask</label>
+      <div class="inp"><select id="s_vessel"></select></div></div>
+    <div class="field"><label>Growth area<span class="hint">Per well or flask</span></label>
+      <div class="inp"><input id="s_area" inputmode="decimal"><span class="u">cm²</span></div></div>
+    <div class="field"><label>Final volume per vessel<span class="hint">Medium + cells after seeding</span></label>
+      <div class="inp"><input id="s_vol" inputmode="decimal"><span class="u">mL</span></div></div>
+    <div class="field"><label>Number of wells / flasks</label>
+      <div class="inp"><input id="s_n" inputmode="numeric" value="24"><span class="u">×</span></div></div>
+  </div>
+  <div class="sec">
+    <h3>Seeding target</h3>
+    <div class="seg" data-mode="seedMode"><button data-v="per" aria-pressed="true">Cells per vessel</button><button data-v="density">Cells per cm²</button><button data-v="conc">Cells per mL</button></div>
+    <div class="field"><label id="s_tlabel">Cells per well</label>
+      <div class="inp"><input id="s_t" inputmode="decimal" value="50000"><select class="usel" id="s_tu"><option value="1">cells</option><option value="K">×10³</option><option value="M">×10⁶</option></select></div></div>
+    <div class="field"><label>Overage<span class="hint">Extra master mix for pipetting loss</span></label>
+      <div class="inp"><input id="s_over" inputmode="decimal" value="10"><span class="u">%</span></div></div>
+  </div>
+
+  <h2 class="ph" style="font-size:21px;margin-top:22px">Fixed volume of medium</h2>
+  <p class="lede">You already have a set amount of medium. Work out how many cells to add to it.</p>
+  <div class="result" id="res-fixed"></div>
+  <div class="sec">
+    <div class="field"><label>Stock concentration</label>
+      <div class="inp"><input id="f_c" inputmode="decimal" value="1.1"><select class="usel" id="f_cu"><option value="M">×10⁶/mL</option><option value="mL">cells/mL</option><option value="uL">cells/µL</option></select></div></div>
+    <div class="field"><label>Medium volume you have</label>
+      <div class="inp"><input id="f_v" inputmode="decimal" value="50"><span class="u">mL</span></div></div>
+    <div class="seg" data-mode="fixTarget"><button data-v="conc" aria-pressed="true">Target concentration</button><button data-v="cells">Target total cells</button></div>
+    <div class="field"><label id="f_tlabel">Final concentration wanted</label>
+      <div class="inp"><input id="f_t" inputmode="decimal" value="2"><select class="usel" id="f_tu"><option value="K">×10³</option><option value="M" selected>×10⁶</option><option value="1">plain</option></select></div></div>
+    <div class="seg" data-mode="fixHow"><button data-v="keep" aria-pressed="true">Keep final volume = medium volume</button><button data-v="add">Add cells on top of medium</button></div>
+    <p class="small">Keep: remove some medium so suspension + medium equals the volume above. Add: pour the suspension in and accept a slightly larger final volume.</p>
+  </div>
+</section>
+
+<!-- ============ DILUTE ============ -->
+<section class="page" id="page-dilute">
+  <h2 class="ph">Dilution</h2>
+  <p class="lede">Leave exactly one of the four fields blank and it gets solved. C₁V₁ = C₂V₂.</p>
+  <div class="result" id="res-c1v1"></div>
+  <div class="sec">
+    <h3>Stock</h3>
+    <div class="field"><label>C₁ stock concentration</label>
+      <div class="inp" id="w_c1"><input id="d_c1" inputmode="decimal" value="1.1"><select class="usel" id="d_c1u"><option value="M">×10⁶/mL</option><option value="mL">cells/mL</option><option value="uL">cells/µL</option></select></div></div>
+    <div class="field"><label>V₁ volume of stock to take</label>
+      <div class="inp" id="w_v1"><input id="d_v1" inputmode="decimal" placeholder="solve"><select class="usel" id="d_v1u"><option value="mL">mL</option><option value="uL">µL</option></select></div></div>
+    <h3>Working dilution</h3>
+    <div class="field"><label>C₂ final concentration</label>
+      <div class="inp" id="w_c2"><input id="d_c2" inputmode="decimal" value="0.2"><select class="usel" id="d_c2u"><option value="M">×10⁶/mL</option><option value="mL">cells/mL</option><option value="uL">cells/µL</option></select></div></div>
+    <div class="field"><label>V₂ final volume</label>
+      <div class="inp" id="w_v2"><input id="d_v2" inputmode="decimal" value="10"><select class="usel" id="d_v2u"><option value="mL">mL</option><option value="uL">µL</option></select></div></div>
+    <div class="actions" style="margin-top:8px"><button class="btn" data-act="clearV1">Solve V₁</button><button class="btn" data-act="clearC2">Solve C₂</button><button class="btn" data-act="clearV2">Solve V₂</button><button class="btn" data-act="clearC1">Solve C₁</button></div>
+  </div>
+
+  <h2 class="ph" style="font-size:21px;margin-top:22px">Serial dilution</h2>
+  <p class="lede">Equal-fold steps, each tube finishing at the same volume.</p>
+  <div class="result" id="res-serial"></div>
+  <div class="sec">
+    <div class="field"><label>Starting concentration</label>
+      <div class="inp"><input id="sd_c" inputmode="decimal" value="1"><select class="usel" id="sd_cu"><option value="M">×10⁶/mL</option><option value="mL">cells/mL</option><option value="uL">cells/µL</option></select></div></div>
+    <div class="field"><label>Fold per step<span class="hint">2 = 1:2, 10 = 1:10</span></label>
+      <div class="inp"><input id="sd_f" inputmode="decimal" value="2"><span class="u">×</span></div></div>
+    <div class="field"><label>Number of steps</label>
+      <div class="inp"><input id="sd_n" inputmode="numeric" value="6"><span class="u">tubes</span></div></div>
+    <div class="field"><label>Volume in each tube<span class="hint">Diluent + transferred, before taking the next transfer out</span></label>
+      <div class="inp"><input id="sd_v" inputmode="decimal" value="1"><select class="usel" id="sd_vu"><option value="mL">mL</option><option value="uL">µL</option></select></div></div>
+  </div>
+</section>
+
+<!-- ============ GROW ============ -->
+<section class="page" id="page-grow">
+  <h2 class="ph">Growth &amp; expected cells</h2>
+  <p class="lede">Project a culture forward from a doubling time, or work the doubling time out from two counts.</p>
+  <div class="result" id="res-pred"></div>
+  <div class="sec">
+    <h3>Prediction</h3>
+    <div class="field"><label>Cell line preset<span class="hint">Typical doubling times. Verify for your own line</span></label>
+      <div class="inp"><select id="g_line"></select></div></div>
+    <div class="field"><label>Doubling time</label>
+      <div class="inp"><input id="g_td" inputmode="decimal" value="24"><span class="u">h</span></div></div>
+    <div class="field"><label>Starting cells<span class="hint">Total seeded, or concentration</span></label>
+      <div class="inp"><input id="g_n0" inputmode="decimal" value="1.2"><select class="usel" id="g_n0u"><option value="M">×10⁶</option><option value="K">×10³</option><option value="1">cells</option></select></div></div>
+    <div class="field"><label>Lag phase<span class="hint">Hours before growth starts. 0 if none</span></label>
+      <div class="inp"><input id="g_lag" inputmode="decimal" value="0"><span class="u">h</span></div></div>
+    <div class="field"><label>Time from now</label>
+      <div class="inp"><input id="g_t" inputmode="decimal" value="72"><span class="u">h</span></div></div>
+    <div class="field"><label>Target cells<span class="hint">Optional. Tells you when you get there</span></label>
+      <div class="inp"><input id="g_target" inputmode="decimal" value="10"><select class="usel" id="g_targetu"><option value="M">×10⁶</option><option value="K">×10³</option><option value="1">cells</option></select></div></div>
+    <div class="field"><label>Maximum (confluent) cells<span class="hint">Optional. Caps the curve, e.g. area × 1×10⁵/cm²</span></label>
+      <div class="inp"><input id="g_max" inputmode="decimal" placeholder="—"><select class="usel" id="g_maxu"><option value="M">×10⁶</option><option value="K">×10³</option><option value="1">cells</option></select></div></div>
+  </div>
+
+  <h2 class="ph" style="font-size:21px;margin-top:22px">Doubling time from two counts</h2>
+  <div class="result" id="res-td"></div>
+  <div class="sec">
+    <div class="field"><label>Count at start</label>
+      <div class="inp"><input id="t_n0" inputmode="decimal" value="0.5"><select class="usel" id="t_n0u"><option value="M">×10⁶</option><option value="K">×10³</option><option value="1">cells</option></select></div></div>
+    <div class="field"><label>Count at end</label>
+      <div class="inp"><input id="t_n1" inputmode="decimal" value="3.2"><select class="usel" id="t_n1u"><option value="M">×10⁶</option><option value="K">×10³</option><option value="1">cells</option></select></div></div>
+    <div class="field"><label>Hours between</label>
+      <div class="inp"><input id="t_h" inputmode="decimal" value="72"><span class="u">h</span></div></div>
+    <div class="field"><label>Cumulative PDL before<span class="hint">Optional. Running population doubling level</span></label>
+      <div class="inp"><input id="t_pdl" inputmode="decimal" placeholder="0"><span class="u">PD</span></div></div>
+    <div class="actions" style="margin-top:6px"><button class="btn" data-act="useTd">Use this doubling time above</button></div>
+  </div>
+</section>
+
+<!-- ============ MORE (hub) ============ -->
+<section class="page" id="page-more">
+  <h2 class="ph">More tools</h2>
+  <p class="lede">Everything else from the bench.</p>
+  <div class="grid2">
+    <button class="tile" data-go="passage"><b>Passage / split</b><span>Split ratios, flasks you can seed, volume per flask</span></button>
+    <button class="tile" data-go="cryo"><b>Cryopreservation</b><span>Vials, cells per vial, freezing medium</span></button>
+    <button class="tile" data-go="tally"><b>Tap counter</b><span>Big live / dead buttons, square by square</span></button>
+    <button class="tile" data-go="rep"><b>Replicate squares</b><span>Mean, SD, CV% across squares or chambers</span></button>
+    <button class="tile" data-go="conv"><b>Unit converter</b><span>cells/mL, ×10⁶, cells/µL, cells/cm², volumes</span></button>
+    <button class="tile" data-go="vessels"><b>Vessel table</b><span>Areas, working volumes, cells at your density</span></button>
+    <button class="tile" data-go="log"><b>Log</b><span>Saved results with notes</span></button>
+    <button class="tile" data-go="formulas"><b>Formulas</b><span>Every equation used here</span></button>
+    <button class="tile" data-go="settings"><b>Settings</b><span>Theme, haptics, defaults, reset</span></button>
+  </div>
+  <div class="install" id="installTip" hidden><div><b>Install on your phone.</b> <span id="installText"></span></div><button class="btn" data-act="hideInstall">Hide</button></div>
+</section>
+
+<!-- ============ PASSAGE ============ -->
+<section class="page" id="page-passage">
+  <button class="back" data-go="more">‹ More</button>
+  <h2 class="ph">Passage / split</h2>
+  <p class="lede">From one harvested flask to the next set of vessels.</p>
+  <div class="result" id="res-pass"></div>
+  <div class="sec">
+    <h3>Harvest</h3>
+    <div class="field"><label>Total viable cells harvested</label>
+      <div class="inp"><input id="p_total" inputmode="decimal" value="11"><select class="usel" id="p_totalu"><option value="M">×10⁶</option><option value="1">cells</option></select></div></div>
+    <div class="field"><label>Resuspended in</label>
+      <div class="inp"><input id="p_resus" inputmode="decimal" value="10"><span class="u">mL</span></div></div>
+    <div class="actions" style="margin-top:6px"><button class="btn" data-act="useCountTotal">Use count result</button></div>
+  </div>
+  <div class="sec">
+    <h3>New vessels</h3>
+    <div class="field"><label>Vessel</label><div class="inp"><select id="p_vessel"></select></div></div>
+    <div class="field"><label>Growth area</label><div class="inp"><input id="p_area" inputmode="decimal"><span class="u">cm²</span></div></div>
+    <div class="field"><label>Final volume per vessel</label><div class="inp"><input id="p_vol" inputmode="decimal"><span class="u">mL</span></div></div>
+    <div class="seg" data-mode="passMode"><button data-v="ratio" aria-pressed="true">By split ratio</button><button data-v="density">By cells / cm²</button><button data-v="cells">By cells / vessel</button></div>
+    <div class="field"><label id="p_tlabel">Split ratio 1 :</label>
+      <div class="inp"><input id="p_t" inputmode="decimal" value="5"><select class="usel" id="p_tu"><option value="1">plain</option><option value="K">×10³</option><option value="M">×10⁶</option></select></div></div>
+    <div class="field"><label>Vessels to seed<span class="hint">Leave blank to seed as many as possible</span></label>
+      <div class="inp"><input id="p_n" inputmode="numeric" placeholder="max"><span class="u">×</span></div></div>
+  </div>
+</section>
+
+<!-- ============ CRYO ============ -->
+<section class="page" id="page-cryo">
+  <button class="back" data-go="more">‹ More</button>
+  <h2 class="ph">Cryopreservation</h2>
+  <p class="lede">Cells per vial, vials, and how much freezing medium to resuspend the pellet in.</p>
+  <div class="result" id="res-cryo"></div>
+  <div class="sec">
+    <div class="field"><label>Cells per vial</label>
+      <div class="inp"><input id="k_per" inputmode="decimal" value="2"><select class="usel" id="k_peru"><option value="M">×10⁶</option><option value="1">cells</option></select></div></div>
+    <div class="field"><label>Vials wanted</label>
+      <div class="inp"><input id="k_n" inputmode="numeric" value="5"><span class="u">vials</span></div></div>
+    <div class="field"><label>Freezing medium per vial</label>
+      <div class="inp"><input id="k_v" inputmode="decimal" value="1"><span class="u">mL</span></div></div>
+    <div class="field"><label>Medium overage</label>
+      <div class="inp"><input id="k_over" inputmode="decimal" value="10"><span class="u">%</span></div></div>
+    <h3>From your suspension</h3>
+    <div class="field"><label>Viable concentration<span class="hint">To get the volume to spin down</span></label>
+      <div class="inp"><input id="k_c" inputmode="decimal" value="1.1"><select class="usel" id="k_cu"><option value="M">×10⁶/mL</option><option value="mL">cells/mL</option><option value="uL">cells/µL</option></select></div></div>
+    <div class="field"><label>Cells available<span class="hint">Optional. Max vials you can make</span></label>
+      <div class="inp"><input id="k_avail" inputmode="decimal" placeholder="—"><select class="usel" id="k_availu"><option value="M">×10⁶</option><option value="1">cells</option></select></div></div>
+    <div class="actions" style="margin-top:6px"><button class="btn" data-act="useCountCryo">Use count result</button></div>
+  </div>
+</section>
+
+<!-- ============ TALLY ============ -->
+<section class="page" id="page-tally">
+  <button class="back" data-go="more">‹ More</button>
+  <h2 class="ph">Tap counter</h2>
+  <p class="lede">Tap while you scan. Counts are kept per square so you also get a spread.</p>
+  <div class="tally"><button class="live" id="tapLive"><span id="tlLive">0</span><small>Live</small></button><button class="dead" id="tapDead"><span id="tlDead">0</span><small>Dead</small></button></div>
+  <div class="sec">
+    <div class="tally-meta"><div>Square <b id="tlSq">1</b> · this square: <span class="kbd" id="tlThis">0 / 0</span></div><div>Total <span class="kbd" id="tlTot">0 live · 0 dead</span></div></div>
+    <div class="sqchips" id="tlChips"></div>
+    <div class="actions"><button class="btn primary" id="tlNext">Next square ›</button><button class="btn" id="tlUndo">Undo</button><button class="btn" id="tlPrev">‹ Previous square</button><button class="btn danger" id="tlReset">Reset</button></div>
+    <div class="actions"><button class="btn primary" data-act="tallyToCount">Send to Count</button><button class="btn" data-act="tallyToRep">Send squares to Replicates</button></div>
+    <p class="small" id="tlStats"></p>
+  </div>
+</section>
+
+<!-- ============ REPLICATES ============ -->
+<section class="page" id="page-rep">
+  <button class="back" data-go="more">‹ More</button>
+  <h2 class="ph">Replicate squares</h2>
+  <p class="lede">Cells per square (or per chamber). Spread tells you whether the load was even.</p>
+  <div class="result" id="res-rep"></div>
+  <div class="sec">
+    <h3>Counts per square</h3>
+    <div class="rep-rows" id="repRows"></div>
+    <div class="actions"><button class="btn" id="repAdd">+ square</button><button class="btn" id="repDel">− square</button><button class="btn primary" data-act="repToCount">Send to Count</button></div>
+    <p class="small">The CV between squares should be under about 20 %. Higher usually means clumps, uneven loading or an air bubble under the coverslip.</p>
+  </div>
+</section>
+
+<!-- ============ CONVERT ============ -->
+<section class="page" id="page-conv">
+  <button class="back" data-go="more">‹ More</button>
+  <h2 class="ph">Unit converter</h2>
+  <div class="result" id="res-conv"></div>
+  <div class="sec">
+    <h3>Concentration</h3>
+    <div class="field"><label>Value</label>
+      <div class="inp"><input id="u_c" inputmode="decimal" value="1.1"><select class="usel" id="u_cu"><option value="M">×10⁶/mL</option><option value="mL">cells/mL</option><option value="uL">cells/µL</option><option value="K">×10³/mL</option><option value="L">cells/L</option></select></div></div>
+    <h3>Cells per area ↔ per vessel</h3>
+    <div class="field"><label>Density</label>
+      <div class="inp"><input id="u_d" inputmode="decimal" value="20000"><span class="u">cells/cm²</span></div></div>
+    <div class="field"><label>Vessel</label><div class="inp"><select id="u_vessel"></select></div></div>
+    <h3>Volume</h3>
+    <div class="field"><label>Value</label>
+      <div class="inp"><input id="u_v" inputmode="decimal" value="250"><select class="usel" id="u_vu"><option value="uL">µL</option><option value="mL">mL</option><option value="L">L</option><option value="nL">nL</option></select></div></div>
+  </div>
+</section>
+
+<!-- ============ VESSELS ============ -->
+<section class="page" id="page-vessels">
+  <button class="back" data-go="more">‹ More</button>
+  <h2 class="ph">Vessel table</h2>
+  <p class="lede">Growth areas and typical working volumes. Enter a seeding density to see cells per vessel.</p>
+  <div class="sec">
+    <div class="field"><label>Seeding density</label>
+      <div class="inp"><input id="v_d" inputmode="decimal" value="20000"><span class="u">cells/cm²</span></div></div>
+    <div class="scroll"><table class="tbl" id="vesselTable"></table></div>
+    <p class="small">Areas follow common Corning / Falcon / Nunc specifications and vary slightly by manufacturer. Edit the area field in Seed or Passage if yours differ.</p>
+  </div>
+</section>
+
+<!-- ============ LOG ============ -->
+<section class="page" id="page-log">
+  <button class="back" data-go="more">‹ More</button>
+  <h2 class="ph">Log</h2>
+  <p class="lede">Saved results, newest first. Stored on this device only.</p>
+  <div class="actions" style="margin:0 0 12px"><button class="btn" data-act="copyLog">Copy all</button><button class="btn" data-act="shareLog">Share…</button><button class="btn danger" data-act="clearLog">Clear log</button></div>
+  <div class="sec" id="logList"></div>
+</section>
+
+<!-- ============ FORMULAS ============ -->
+<section class="page" id="page-formulas">
+  <button class="back" data-go="more">‹ More</button>
+  <h2 class="ph">Formulas</h2>
+  <div class="sec">
+    <h3>Hemocytometer</h3>
+    <div class="formula">cells/mL = (cells ÷ squares) × DF × 1000 ÷ V_square(µL)
+Neubauer: V_square = 0.1 µL  →  ×10⁴
+DF = (sample + stain) ÷ sample × pre-dilution
+viability % = live ÷ (live + dead) × 100
+total cells = cells/mL × suspension mL</div>
+    <h3>Seeding</h3>
+    <div class="formula">cells/vessel = density(cells/cm²) × area
+suspension/vessel = cells/vessel ÷ stock conc
+medium/vessel = final volume − suspension
+master mix = per-vessel × n × (1 + overage)</div>
+    <h3>Fixed medium volume</h3>
+    <div class="formula">keep final volume V:   V_cells = C₂·V ÷ C₁
+add on top of V:        V_cells = C₂·V ÷ (C₁ − C₂)
+                        final = (V + V_cells), conc = N ÷ final</div>
+    <h3>Dilution</h3>
+    <div class="formula">C₁V₁ = C₂V₂
+serial: transfer = V_tube ÷ fold,  diluent = V_tube − transfer
+        conc_k = C₀ ÷ fold^k</div>
+    <h3>Growth</h3>
+    <div class="formula">N(t) = N₀ × 2^((t − lag) ÷ Td)
+Td = Δt × ln2 ÷ ln(N₁ ÷ N₀)
+µ = ln(N₁ ÷ N₀) ÷ Δt
+PD = log₂(N₁ ÷ N₀) = 3.32 × log₁₀(N₁ ÷ N₀)
+time to target = Td × log₂(target ÷ N₀) + lag</div>
+    <h3>Replicates</h3>
+    <div class="formula">SD = √( Σ(x − mean)² ÷ (n − 1) )
+CV % = SD ÷ mean × 100
+Poisson error of a count ≈ √N  (100 cells → ±10 %)</div>
+  </div>
+</section>
+
+<!-- ============ SETTINGS ============ -->
+<section class="page" id="page-settings">
+  <button class="back" data-go="more">‹ More</button>
+  <h2 class="ph">Settings</h2>
+  <div class="sec">
+    <h3>Appearance</h3>
+    <div class="seg" data-mode="theme"><button data-v="system" aria-pressed="true">System</button><button data-v="light">Light</button><button data-v="dark">Dark</button></div>
+    <h3>Tap counter</h3>
+    <div class="seg" data-mode="haptic"><button data-v="on" aria-pressed="true">Vibrate on tap (Android)</button><button data-v="off">Silent</button></div>
+    <h3>Data</h3>
+    <div class="actions"><button class="btn" data-act="resetInputs">Reset all inputs to examples</button><button class="btn danger" data-act="clearLog">Clear log</button></div>
+    <p class="small">All inputs and the log live in this browser's storage on this device. Nothing is uploaded. Installing to the home screen keeps a separate copy of that storage from Safari or Chrome.</p>
+    <h3>Install</h3>
+    <p class="small"><b>iPhone / iPad:</b> open this page in Safari, tap Share, then <b>Add to Home Screen</b>.<br><b>Android:</b> open in Chrome, tap the ⋮ menu, then <b>Install app</b> or <b>Add to Home screen</b>.</p>
+    <h3>About</h3>
+    <p class="small">CellBench. Numbers are rounded for display; calculations use full precision. Cell-line doubling times are typical published ranges and should be confirmed for your own stocks. Not a medical device.</p>
+  </div>
+</section>
+</div>
+
+<nav class="tabs" aria-label="Sections"><div class="wrap">
+  <button data-tab="count" aria-current="page"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M15 3v18M3 9h18M3 15h18"/></svg>Count</button>
+  <button data-tab="seed"><svg viewBox="0 0 24 24"><rect x="2.5" y="5" width="19" height="14" rx="2"/><circle cx="7.5" cy="9.5" r="1.6"/><circle cx="12" cy="9.5" r="1.6"/><circle cx="16.5" cy="9.5" r="1.6"/><circle cx="7.5" cy="14.5" r="1.6"/><circle cx="12" cy="14.5" r="1.6"/><circle cx="16.5" cy="14.5" r="1.6"/></svg>Seed</button>
+  <button data-tab="dilute"><svg viewBox="0 0 24 24"><path d="M9 3h6M10 3v6.5L5.5 18a2 2 0 0 0 1.8 3h9.4a2 2 0 0 0 1.8-3L14 9.5V3"/><path d="M7.5 15h9"/></svg>Dilute</button>
+  <button data-tab="grow"><svg viewBox="0 0 24 24"><path d="M3 20h18M3 20V4"/><path d="M4 18c5 0 7-1 9-5s4-7 8-8"/></svg>Grow</button>
+  <button data-tab="more"><svg viewBox="0 0 24 24"><circle cx="5" cy="12" r="1.6"/><circle cx="12" cy="12" r="1.6"/><circle cx="19" cy="12" r="1.6"/></svg>More</button>
+</div></nav>
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+'use strict';
+const $=id=>document.getElementById(id);
+const S={get(k,d){try{const v=localStorage.getItem('cb.'+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem('cb.'+k,JSON.stringify(v))}catch(e){}}};
+
+/* ---------- data ---------- */
+const VESSELS=[
+ ['384-well plate (per well)',0.056,0.05],
+ ['96-well plate (per well)',0.32,0.2],
+ ['48-well plate (per well)',0.95,0.4],
+ ['24-well plate (per well)',1.9,1.0],
+ ['12-well plate (per well)',3.8,2.0],
+ ['6-well plate (per well)',9.5,2.5],
+ ['8-well chamber slide (per well)',0.7,0.4],
+ ['35 mm dish',8.8,2.0],
+ ['60 mm dish',21,4.0],
+ ['100 mm dish',55,10],
+ ['150 mm dish',145,20],
+ ['T-25 flask',25,5],
+ ['T-75 flask',75,15],
+ ['T-175 flask',175,35],
+ ['T-225 flask',225,45],
+ ['Custom',null,null]
+];
+const LINES=[
+ ['Custom',null],['HeLa',24],['HEK293 / 293T',24],['CHO-K1',17],['A549',22],['MCF-7',29],['MDA-MB-231',26],['HepG2',48],['HCT116',18],['Caco-2',32],['PC-3',33],['U2OS',29],['SH-SY5Y',48],['Jurkat',24],['K562',20],['THP-1',36],['RAW 264.7',15],['NIH/3T3',20],['C2C12',20],['Vero',24],['MDCK',24],['HUVEC (primary)',30],['MSC (primary)',40],['Human iPSC',20],['Sf9 (insect)',24],['S2 (Drosophila)',24],['Yeast (S. cerevisiae)',1.5],['E. coli',0.33]
+];
+const UM={M:1e6,K:1e3,'1':1,mL:1,uL:1e3,L:1e-3};
+const VM={mL:1,uL:1e-3,L:1000,nL:1e-6};
+
+/* ---------- helpers ---------- */
+function num(id){const el=$(id);if(!el)return NaN;const s=String(el.value).trim().replace(/,/g,'').replace(/\s/g,'');if(s==='')return NaN;const n=Number(s);return isFinite(n)?n:NaN}
+function cu(idv,idu){return num(idv)*UM[$(idu).value]}
+function vol(idv,idu){return num(idv)*VM[$(idu).value]}
+function mode(k,d){return MODES[k]||d}
+const SUP='\u2070\u00B9\u00B2\u00B3\u2074\u2075\u2076\u2077\u2078\u2079';
+function sup(n){const neg=n<0;return (neg?'⁻':'')+String(Math.abs(n)).split('').map(c=>SUP[+c]).join('')}
+function sig(x,n=3){if(!isFinite(x))return '—';if(x===0)return '0';const d=Math.max(0,n-Math.floor(Math.log10(Math.abs(x)))-1);return Number(x.toFixed(Math.min(d,8))).toLocaleString(undefined,{maximumFractionDigits:8})}
+function cells(x){if(!isFinite(x))return '—';if(x<0)return '−'+cells(-x);if(x===0)return '0';if(x<1e4)return sig(x,3);const e=Math.floor(Math.log10(x));let m=x/Math.pow(10,e);let s=m.toFixed(2);if(Number(s)>=10){return cells(x*1.0000001)}return s+' × 10'+sup(e)}
+function full(x){return isFinite(x)?Math.round(x).toLocaleString():'—'}
+function mil(x){return isFinite(x)?sig(x/1e6,3)+' M':'—'}
+function fvol(mL){if(!isFinite(mL))return '—';const a=Math.abs(mL);if(a===0)return '0 mL';if(a<0.001)return sig(mL*1e6)+' nL';if(a<1)return sig(mL*1000)+' µL';if(a>=1000)return sig(mL/1000)+' L';return sig(mL)+' mL'}
+function fvolBoth(mL){if(!isFinite(mL))return '—';const a=Math.abs(mL);if(a>=1&&a<1000)return sig(mL)+' mL ('+sig(mL*1000)+' µL)';return fvol(mL)}
+function hrs(h){if(!isFinite(h))return '—';if(h<0)return 'already reached';if(h<1)return sig(h*60)+' min';if(h<48)return sig(h)+' h';return sig(h)+' h ('+sig(h/24)+' d)'}
+function pct(x){return isFinite(x)?sig(x*100,3)+' %':'—'}
+function esc(s){return String(s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]))}
+const LAST={};
+function render(id,o){
+  const el=$(id);if(!el)return;let h='';
+  if(o.label)h+=`<div class="r-label">${o.label}</div>`;
+  h+=`<div class="r-primary">${o.primary==null?'—':o.primary}${o.unit?`<small>${o.unit}</small>`:''}</div>`;
+  if(o.sub)h+=`<div class="r-sub">${o.sub}</div>`;
+  if(o.rows&&o.rows.length)h+='<div class="rows">'+o.rows.map(r=>r.length===1?`<div class="h"><span>${r[0]}</span></div>`:`<div><span>${r[0]}</span><b>${r[1]}</b></div>`).join('')+'</div>';
+  if(o.svg)h+=o.svg;
+  (o.notes||[]).forEach(n=>h+=`<div class="note ${n.cls||''}">${n.t}</div>`);
+  h+=`<div class="actions"><button class="btn" data-log="${id}">Save to log</button>${o.extra||''}</div>`;
+  el.innerHTML=h;
+  const lines=[];lines.push((o.label?o.label+': ':'')+strip(o.primary==null?'—':o.primary)+(o.unit?' '+strip(o.unit):''));if(o.sub)lines.push(strip(o.sub));(o.rows||[]).forEach(r=>lines.push(r.length===1?'— '+strip(r[0])+' —':strip(r[0])+': '+strip(r[1])));(o.notes||[]).forEach(n=>lines.push('! '+strip(n.t)));
+  LAST[id]={title:o.title||o.label||id,text:lines.join('\n')};
+}
+const tmp=document.createElement('div');function strip(h){tmp.innerHTML=h;return tmp.textContent}
+let toastT;function toast(m){const t=$('toast');t.textContent=m;t.classList.add('show');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('show'),1800)}
+function setVal(id,v){const el=$(id);if(el){el.value=v}}
+function setConc(idv,idu,c){ if(!isFinite(c)){return} if(c>=1e5){setVal(idv,sig(c/1e6,4).replace(/,/g,''));$(idu).value='M'}else{setVal(idv,sig(c,4).replace(/,/g,''));$(idu).value='mL'} }
+function setCount(idv,idu,c){ if(!isFinite(c))return; if(c>=1e5){setVal(idv,sig(c/1e6,4).replace(/,/g,''));$(idu).value='M'}else{setVal(idv,sig(c,4).replace(/,/g,''));$(idu).value='1'} }
+
+/* ---------- state ---------- */
+let MODES=S.get('modes',{});
+function fillVessels(sel){const el=$(sel);el.innerHTML=VESSELS.map((v,i)=>`<option value="${i}">${v[0]}</option>`).join('');}
+['s_vessel','p_vessel','u_vessel'].forEach(fillVessels);
+$('s_vessel').value=1;$('p_vessel').value=12;$('u_vessel').value=1;
+$('g_line').innerHTML=LINES.map((l,i)=>`<option value="${i}">${l[0]}${l[1]?' · ~'+l[1]+' h':''}</option>`).join('');$('g_line').value=1;
+function applyVessel(sel,area,volId){const v=VESSELS[+$(sel).value];if(v&&v[1]!=null){setVal(area,v[1]);setVal(volId,v[2])}}
+applyVessel('s_vessel','s_area','s_vol');applyVessel('p_vessel','p_area','p_vol');
+
+const DEFAULTS={};
+document.querySelectorAll('.page input, .page select').forEach(el=>{if(el.id)DEFAULTS[el.id]=el.value});
+function saveInputs(){const o={};document.querySelectorAll('.page input, .page select').forEach(el=>{if(el.id)o[el.id]=el.value});S.set('inputs',o)}
+function restoreInputs(){const o=S.get('inputs',null);if(!o)return;Object.keys(o).forEach(k=>{const el=$(k);if(el)el.value=o[k]})}
+restoreInputs();
+document.querySelectorAll('.seg').forEach(seg=>{const k=seg.dataset.mode;const cur=MODES[k];if(cur){seg.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===cur?'true':'false'))}else{MODES[k]=seg.querySelector('[aria-pressed="true"]').dataset.v}});
+function applyTheme(){const t=mode('theme','system');if(t==='system')document.documentElement.removeAttribute('data-theme');else document.documentElement.setAttribute('data-theme',t)}
+applyTheme();
+
+/* ---------- COUNT ---------- */
+function chamberSync(){const v=$('c_chamber').value;if(v!=='custom'){setVal('c_vol',parseFloat(v))}}
+function calcCount(){
+  const v=num('c_vol'),sq=num('c_sq'),live=num('c_live')||0,dead=num('c_dead')||0,s=num('c_s'),t=num('c_t'),pre=num('c_pre')||1,susp=num('c_susp');
+  const df=(isFinite(s)&&s>0&&isFinite(t)?(s+t)/s:1)*pre;
+  const tot=live+dead,avg=tot/sq,perMl=df*1000/v;
+  const cTot=avg*perMl,cLive=live/sq*perMl,cDead=dead/sq*perMl,viab=tot>0?live/tot:NaN;
+  const notes=[];
+  if(!(sq>0)||!(v>0))notes.push({t:'Enter squares counted and the volume per square.',cls:'crit'});
+  if(tot>0&&tot<100)notes.push({t:`Only ${tot} cells counted. Poisson error is about ±${sig(100/Math.sqrt(tot),2)} %. Count more squares or load a less dilute sample.`});
+  if(sq>0&&avg>300)notes.push({t:`${sig(avg,3)} cells per square is crowded and cells overlap. Dilute the sample further (try ${sig(Math.ceil(avg/100),2)}× more).`});
+  if(isFinite(viab)&&viab<0.8&&tot>0)notes.push({t:`Viability ${pct(viab)} is low. Check handling, trypsin time and how long cells sat in trypan blue (count within 3 min).`});
+  if(tot>=100&&avg>=20&&avg<=300&&(!isFinite(viab)||viab>=0.8))notes.push({t:'Count size and density are in a good range.',cls:'good'});
+  render('res-count',{title:'Hemocytometer count',label:'Viable concentration',primary:cells(cLive),unit:'cells/mL',sub:`${full(cLive)} /mL · ${mil(cLive)} per mL`,rows:[
+    ['Viability',pct(viab)],
+    ['Total concentration',cells(cTot)+' /mL'],
+    ['Dead concentration',cells(cDead)+' /mL'],
+    ['Dilution factor',sig(df,4)+'×'],
+    ['Mean cells per square',sig(avg,3)],
+    ['In your suspension'],
+    ['Viable cells in '+(isFinite(susp)?fvol(susp):'—'),cells(cLive*susp)],
+    ['Total cells in '+(isFinite(susp)?fvol(susp):'—'),cells(cTot*susp)]
+  ],notes});
+  return {cLive,cTot,viab,susp};
+}
+
+/* ---------- SEED ---------- */
+const TL={per:'Cells per vessel',density:'Cells per cm²',conc:'Cells per mL of medium'};
+function calcSeed(){
+  const C=cu('s_c','s_cu'),area=num('s_area'),V=num('s_vol'),n=num('s_n'),over=(num('s_over')||0)/100,m=mode('seedMode','per'),T=cu('s_t','s_tu');
+  const availRaw=num('s_avail');const avail=isFinite(availRaw)?availRaw*UM[$('s_availu').value]:NaN;
+  $('s_tlabel').textContent=TL[m];
+  let P=m==='per'?T:m==='density'?T*area:T*V;
+  const suspPer=P/C,mediaPer=V-suspPer,total=P*n,totalOver=total*(1+over),f=n*(1+over);
+  const notes=[];
+  if(!(C>0))notes.push({t:'Enter the stock concentration.',cls:'crit'});
+  if(isFinite(suspPer)&&suspPer>V&&V>0)notes.push({t:`Stock is too dilute: ${fvol(suspPer)} of suspension will not fit in ${fvol(V)}. Spin down and resuspend at ≥ ${cells(P/V)} cells/mL, or seed fewer cells.`,cls:'crit'});
+  else if(isFinite(suspPer)&&V>0&&suspPer/V>0.5)notes.push({t:`Suspension makes up ${pct(suspPer/V)} of the final volume. Fine, but the old medium comes along with it.`});
+  if(isFinite(avail)){if(totalOver>avail)notes.push({t:`You need ${cells(totalOver)} cells but have ${cells(avail)}. Enough for ${Math.floor(avail/P/(1+over))} vessels with overage, or ${Math.floor(avail/P)} without.`,cls:'crit'});else notes.push({t:`Enough cells: ${cells(avail-totalOver)} left over after seeding.`,cls:'good'})}
+  render('res-seed',{title:'Seeding',label:'Suspension per vessel',primary:fvol(suspPer),unit:'+ '+fvol(mediaPer)+' medium',sub:`${cells(P)} cells per vessel · ${sig(P/area,3)} cells/cm² · ${cells(P/V)} cells/mL`,rows:[
+    ['Master mix for '+(isFinite(n)?n:'—')+' × '+(VESSELS[+$('s_vessel').value]||['vessel'])[0].replace(' (per well)','')+(over?` (+${sig(over*100,2)} %)`:'')],
+    ['Cell suspension',fvolBoth(suspPer*f)],
+    ['Fresh medium',fvolBoth(mediaPer*f)],
+    ['Total mix',fvolBoth(V*f)],
+    ['Cells needed',cells(totalOver)+' ('+cells(total)+' net)'],
+    ['Dispense per vessel',fvolBoth(V)]
+  ],notes});
+}
+function calcFixed(){
+  const C1=cu('f_c','f_cu'),V=num('f_v'),tm=mode('fixTarget','conc'),how=mode('fixHow','keep');
+  const traw=num('f_t'),tu=UM[$('f_tu').value];
+  $('f_tlabel').textContent=tm==='conc'?'Final concentration wanted (per mL)':'Total cells wanted';
+  let Vc,N,C2,Vf,notes=[];
+  if(tm==='conc'){C2=traw*tu;if(how==='keep'){Vc=C2*V/C1;N=C2*V;Vf=V}else{Vc=C2*V/(C1-C2);N=Vc*C1;Vf=V+Vc;if(C2>=C1)notes.push({t:'Target concentration must be below the stock concentration when adding on top.',cls:'crit'})}}
+  else{N=traw*tu;Vc=N/C1;if(how==='keep'){Vf=V;C2=N/V}else{Vf=V+Vc;C2=N/Vf}}
+  const mediaUsed=how==='keep'?V-Vc:V;
+  if(how==='keep'&&Vc>V)notes.push({t:`Needs ${fvol(Vc)} of suspension, more than the ${fvol(V)} available. Concentrate the stock to ≥ ${cells(N/V)} cells/mL or lower the target.`,cls:'crit'});
+  if(how==='keep'&&Vc<=V&&Vc>0)notes.push({t:`Remove ${fvol(Vc)} of medium first (or start with ${fvol(mediaUsed)}), then add ${fvol(Vc)} of cells.`,cls:'info'});
+  if(how==='add'&&isFinite(Vc)&&Vc>0&&C2<C1)notes.push({t:`Add ${fvol(Vc)} of suspension straight into the ${fvol(V)}. Final volume becomes ${fvol(Vf)}.`,cls:'info'});
+  render('res-fixed',{title:'Fixed medium volume',label:'Suspension to add',primary:fvol(Vc),unit:'of stock',sub:`${cells(N)} cells · final ${cells(C2)} cells/mL in ${fvol(Vf)}`,rows:[
+    ['Medium used',fvolBoth(mediaUsed)],['Cells added',cells(N)],['Final volume',fvolBoth(Vf)],['Final concentration',cells(C2)+' /mL'],['Dilution of stock','1 : '+sig(Vf/Vc,3)]
+  ],notes});
+}
+
+/* ---------- DILUTE ---------- */
+function calcC1V1(){
+  const ids=['d_c1','d_v1','d_c2','d_v2'];const blank=ids.filter(i=>!isFinite(num(i)));
+  ['w_c1','w_v1','w_c2','w_v2'].forEach(w=>$(w).classList.remove('solve'));
+  if(blank.length!==1){render('res-c1v1',{title:'C1V1',label:'C₁V₁ = C₂V₂',primary:'—',sub:blank.length===0?'All four filled. Clear the one you want solved.':'Leave exactly one field blank.',notes:[]});return}
+  let C1=cu('d_c1','d_c1u'),V1=vol('d_v1','d_v1u'),C2=cu('d_c2','d_c2u'),V2=vol('d_v2','d_v2u');
+  const b=blank[0];let label,prim,unit,sub;
+  $('w_'+b.slice(2)).classList.add('solve');
+  if(b==='d_v1'){V1=C2*V2/C1;label='Take this much stock';prim=fvol(V1);unit='+ '+fvol(V2-V1)+' diluent'}
+  if(b==='d_v2'){V2=C1*V1/C2;label='Final volume';prim=fvol(V2);unit='add '+fvol(V2-V1)+' diluent'}
+  if(b==='d_c2'){C2=C1*V1/V2;label='Final concentration';prim=cells(C2);unit='cells/mL'}
+  if(b==='d_c1'){C1=C2*V2/V1;label='Stock must be';prim=cells(C1);unit='cells/mL'}
+  const notes=[];if(V1>V2)notes.push({t:'Stock volume exceeds the final volume. The stock is already more dilute than the target.',cls:'crit'});
+  render('res-c1v1',{title:'C1V1 dilution',label,primary:prim,unit,sub:`dilution 1 : ${sig(V2/V1,3)} · ${cells(C2*V2)} cells in the final volume`,rows:[
+    ['Stock C₁',cells(C1)+' /mL'],['Take V₁',fvolBoth(V1)],['Diluent to add',fvolBoth(V2-V1)],['Final C₂',cells(C2)+' /mL'],['Final V₂',fvolBoth(V2)]
+  ],notes});
+}
+function calcSerial(){
+  const C=cu('sd_c','sd_cu'),f=num('sd_f'),n=Math.min(Math.round(num('sd_n')),16),V=vol('sd_v','sd_vu');
+  if(!(f>1)||!(n>=1)||!(V>0)||!(C>0)){render('res-serial',{title:'Serial dilution',label:'Serial dilution',primary:'—',sub:'Fold must be above 1.'});return}
+  const tr=V/f,dil=V-tr;const rows=[];
+  for(let k=1;k<=n;k++){rows.push([`Tube ${k} · 1:${sig(Math.pow(f,k),4)}`,cells(C/Math.pow(f,k))+' /mL'])}
+  render('res-serial',{title:'Serial dilution',label:'Each tube',primary:fvol(dil),unit:'diluent + '+fvol(tr)+' transferred',sub:`fold ${sig(f)}× · ${n} tubes · last tube 1:${sig(Math.pow(f,n),4)}`,rows:[['Diluent to pre-fill in every tube',fvolBoth(dil)],['Transfer from previous tube',fvolBoth(tr)],['Total diluent',fvolBoth(dil*n)],['Concentrations']].concat(rows),
+  notes:[{t:`Tubes 1–${n-1} end with ${fvol(V-tr)} after the next transfer is taken; tube ${n} keeps ${fvol(V)}. Mix each tube before transferring.`,cls:'info'}]});
+}
+
+/* ---------- GROW ---------- */
+function lineSync(){const l=LINES[+$('g_line').value];if(l&&l[1])setVal('g_td',l[1])}
+function growthChart(N0,Td,lag,t,tEnd,target,max){
+  const W=320,H=120,pl=42,pr=10,pt=10,pb=22;const xs=Math.max(tEnd,t,1);
+  const Nf=x=>{let n=N0*Math.pow(2,Math.max(0,x-lag)/Td);return isFinite(max)&&max>0?Math.min(n,max):n};
+  const vals=[];for(let i=0;i<=60;i++){const x=xs*i/60;vals.push([x,Nf(x)])}
+  const ymin=Math.log10(N0*0.8),ymax=Math.log10(Math.max(Nf(xs),isFinite(target)?target:0,N0*2)*1.3);
+  const X=x=>pl+(W-pl-pr)*x/xs,Y=n=>pt+(H-pt-pb)*(1-(Math.log10(n)-ymin)/(ymax-ymin));
+  let d='';vals.forEach((p,i)=>{d+=(i?'L':'M')+X(p[0]).toFixed(1)+' '+Y(p[1]).toFixed(1)+' '});
+  const area=d+`L${X(xs).toFixed(1)} ${(H-pb).toFixed(1)} L${pl} ${(H-pb).toFixed(1)} Z`;
+  let ticks='';const decades=[];for(let e=Math.ceil(ymin);e<=Math.floor(ymax);e++)decades.push(e);
+  decades.forEach(e=>{ticks+=`<line x1="${pl}" x2="${W-pr}" y1="${Y(Math.pow(10,e)).toFixed(1)}" y2="${Y(Math.pow(10,e)).toFixed(1)}" stroke="var(--line)" stroke-dasharray="2 3"/><text x="${pl-4}" y="${(Y(Math.pow(10,e))+3).toFixed(1)}" text-anchor="end">10${sup(e)}</text>`});
+  const xt=[0,xs/2,xs];let xl='';xt.forEach(x=>{xl+=`<text x="${X(x).toFixed(1)}" y="${H-6}" text-anchor="middle">${sig(x,3)} h</text>`});
+  let tg='';if(isFinite(target)&&target>0&&Math.log10(target)<ymax&&Math.log10(target)>ymin)tg=`<line x1="${pl}" x2="${W-pr}" y1="${Y(target).toFixed(1)}" y2="${Y(target).toFixed(1)}" stroke="var(--warn)" stroke-width="1" stroke-dasharray="4 3"/>`;
+  const mk=`<circle cx="${X(t).toFixed(1)}" cy="${Y(Nf(t)).toFixed(1)}" r="4" fill="var(--accent)" stroke="var(--surface)" stroke-width="2"/>`;
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="Projected cell number over time"><path d="${area}" fill="var(--accent)" fill-opacity=".12"/>${ticks}${tg}<path d="${d}" fill="none" stroke="var(--accent)" stroke-width="2"/>${mk}<line x1="${pl}" x2="${W-pr}" y1="${H-pb}" y2="${H-pb}" stroke="var(--line)"/>${xl}</svg>`;
+}
+function calcPred(){
+  const Td=num('g_td'),N0=cu('g_n0','g_n0u'),lag=num('g_lag')||0,t=num('g_t'),target=cu('g_target','g_targetu'),max=cu('g_max','g_maxu');
+  const Nf=x=>{let n=N0*Math.pow(2,Math.max(0,x-lag)/Td);return isFinite(max)&&max>0?Math.min(n,max):n};
+  const N=Nf(t),pd=Math.log2(N/N0);
+  const tTarget=isFinite(target)&&target>0?(target<=N0?0:Td*Math.log2(target/N0)+lag):NaN;
+  const tMax=isFinite(max)&&max>0?(max<=N0?0:Td*Math.log2(max/N0)+lag):NaN;
+  const rows=[['Population doublings',sig(pd,3)],['Fold increase',sig(N/N0,3)+'×'],['Growth rate µ',sig(Math.LN2/Td,3)+' /h'],['In 24 h',cells(Nf(24))],['In 48 h',cells(Nf(48))],['In 72 h',cells(Nf(72))],['In 7 d',cells(Nf(168))]];
+  const notes=[];
+  if(isFinite(tTarget)){rows.push(['Reach '+cells(target),hrs(tTarget)]);const when=new Date(Date.now()+tTarget*3600e3);notes.push({t:`Target ${cells(target)} is reached in ${hrs(tTarget)} — around ${when.toLocaleString(undefined,{weekday:'short',hour:'2-digit',minute:'2-digit',day:'numeric',month:'short'})}.`,cls:'info'})}
+  if(isFinite(tMax)&&tMax<t)notes.push({t:`Culture hits the maximum of ${cells(max)} after ${hrs(tMax)} and stops growing. Passage before then.`});
+  if(isFinite(max)&&isFinite(target)&&target>max)notes.push({t:'Target is above the confluent maximum. It cannot be reached in this vessel.',cls:'crit'});
+  render('res-pred',{title:'Growth prediction',label:'Expected cells after '+(isFinite(t)?hrs(t):'—'),primary:cells(N),unit:'cells',sub:`${full(N)} · from ${cells(N0)} at Td ${sig(Td)} h${lag?' with '+sig(lag)+' h lag':''}`,rows,svg:isFinite(N)&&N0>0&&Td>0?growthChart(N0,Td,lag,t,isFinite(tTarget)?Math.max(tTarget,t):t,target,max):'',notes});
+}
+function calcTd(){
+  const N0=cu('t_n0','t_n0u'),N1=cu('t_n1','t_n1u'),h=num('t_h'),prev=num('t_pdl')||0;
+  const r=N1/N0,Td=h*Math.LN2/Math.log(r),pd=Math.log2(r),mu=Math.log(r)/h;
+  const notes=[];if(r<=1)notes.push({t:'No net growth between the two counts. Doubling time is undefined.',cls:'crit'});
+  render('res-td',{title:'Doubling time',label:'Doubling time',primary:isFinite(Td)&&Td>0?sig(Td,3):'—',unit:'hours',sub:`${sig(r,3)}× in ${sig(h)} h`,rows:[['Population doublings this passage',sig(pd,3)],['Cumulative PDL',sig(prev+pd,3)],['Specific growth rate µ',sig(mu,3)+' /h'],['Doublings per day',sig(24/Td,3)]],notes});
+  return Td;
+}
+
+/* ---------- PASSAGE ---------- */
+const PL={ratio:'Split ratio 1 :',density:'Cells per cm²',cells:'Cells per vessel'};
+function calcPass(){
+  const T=cu('p_total','p_totalu'),R=num('p_resus'),area=num('p_area'),V=num('p_vol'),m=mode('passMode','ratio'),t=cu('p_t','p_tu'),nIn=num('p_n');
+  $('p_tlabel').textContent=PL[m];
+  const C=T/R;let P;if(m==='ratio')P=T/t;else if(m==='density')P=t*area;else P=t;
+  const maxN=Math.floor(T/P+1e-9);const n=isFinite(nIn)&&nIn>0?nIn:maxN;
+  const suspPer=P/C,mediaPer=V-suspPer,ratio=T/P;
+  const notes=[];
+  if(suspPer>V)notes.push({t:`${fvol(suspPer)} of suspension per vessel exceeds the ${fvol(V)} working volume. Resuspend the pellet in ≤ ${fvol(T/(P/V))} instead.`,cls:'crit'});
+  if(isFinite(nIn)&&nIn>maxN)notes.push({t:`Only enough cells for ${maxN} vessels at this density (you asked for ${nIn}).`,cls:'crit'});
+  if(m!=='ratio'&&isFinite(ratio))notes.push({t:`This is a 1 : ${sig(ratio,3)} split overall. Leftover after ${n} vessels: ${cells(T-P*n)} cells.`,cls:'info'});
+  if(m==='ratio')notes.push({t:`Each vessel gets ${sig(P/area,3)} cells/cm². Leftover after ${n} vessels: ${cells(Math.max(0,T-P*n))} cells.`,cls:'info'});
+  render('res-pass',{title:'Passage',label:'Per new vessel',primary:fvol(suspPer),unit:'suspension + '+fvol(mediaPer)+' medium',sub:`${cells(P)} cells each · ${n} vessel${n===1?'':'s'} · stock ${cells(C)} /mL`,rows:[['Vessels possible',maxN+' at most'],['Cells per vessel',cells(P)],['Seeding density',sig(P/area,3)+' cells/cm²'],['Suspension for '+n,fvolBoth(suspPer*n)],['Medium for '+n,fvolBoth(mediaPer*n)]],notes});
+}
+
+/* ---------- CRYO ---------- */
+function calcCryo(){
+  const per=cu('k_per','k_peru'),n=num('k_n'),v=num('k_v'),over=(num('k_over')||0)/100,C=cu('k_c','k_cu');const ar=num('k_avail');const avail=isFinite(ar)?ar*UM[$('k_availu').value]:NaN;
+  const total=per*n,spin=total/C,fm=v*n*(1+over);
+  const notes=[];
+  if(isFinite(avail)){const maxV=Math.floor(avail/per);if(total>avail)notes.push({t:`Need ${cells(total)} but have ${cells(avail)}: enough for ${maxV} vials at ${cells(per)} each, or ${n} vials at ${cells(avail/n)} each.`,cls:'crit'});else notes.push({t:`Enough for ${maxV} vials at this density. ${cells(avail-total)} cells left over.`,cls:'good'})}
+  notes.push({t:`Spin ${fvol(spin)} of suspension, discard supernatant, resuspend the pellet in ${fvol(fm)} freezing medium, aliquot ${fvol(v)} per vial.`,cls:'info'});
+  render('res-cryo',{title:'Cryopreservation',label:'Cells needed',primary:cells(total),unit:'for '+(isFinite(n)?n:'—')+' vials',sub:`${cells(per)} per vial · ${cells(per/v)} cells/mL in the vial`,rows:[['Suspension to pellet',fvolBoth(spin)],['Freezing medium (+'+sig(over*100,2)+' %)',fvolBoth(fm)],['Per vial',fvolBoth(v)]],notes});
+}
+
+/* ---------- TALLY ---------- */
+let TAL=S.get('tally',{sq:0,data:[[0,0]],hist:[]});
+function tSave(){S.set('tally',TAL)}
+function tRender(){
+  const d=TAL.data[TAL.sq];$('tlLive').textContent=d[0];$('tlDead').textContent=d[1];$('tlSq').textContent=TAL.sq+1;$('tlThis').textContent=d[0]+' / '+d[1];
+  const L=TAL.data.reduce((a,b)=>a+b[0],0),D=TAL.data.reduce((a,b)=>a+b[1],0);$('tlTot').textContent=`${L} live · ${D} dead`;
+  $('tlChips').innerHTML=TAL.data.map((x,i)=>`<span class="${i===TAL.sq?'cur':''}">#${i+1}: ${x[0]+x[1]}</span>`).join('');
+  const tot=TAL.data.map(x=>x[0]+x[1]).filter((x,i)=>x>0||i<TAL.data.length-1);
+  let s='';if(L+D>0){s=`Viability ${pct(L/(L+D))}.`;if(tot.length>1){const st=stats(tot);s+=` Per-square mean ${sig(st.mean,3)}, CV ${sig(st.cv,2)} %.`}}
+  $('tlStats').textContent=s;
+}
+function tap(kind){const d=TAL.data[TAL.sq];d[kind]++;TAL.hist.push([TAL.sq,kind]);if(TAL.hist.length>500)TAL.hist.shift();if(mode('haptic','on')==='on'&&navigator.vibrate){try{navigator.vibrate(kind?[8,30,8]:8)}catch(e){}}tSave();tRender()}
+$('tapLive').addEventListener('click',()=>tap(0));$('tapDead').addEventListener('click',()=>tap(1));
+$('tlUndo').addEventListener('click',()=>{const h=TAL.hist.pop();if(!h)return;TAL.data[h[0]][h[1]]=Math.max(0,TAL.data[h[0]][h[1]]-1);TAL.sq=h[0];tSave();tRender()});
+$('tlNext').addEventListener('click',()=>{TAL.sq++;if(!TAL.data[TAL.sq])TAL.data[TAL.sq]=[0,0];tSave();tRender()});
+$('tlPrev').addEventListener('click',()=>{if(TAL.sq>0)TAL.sq--;tSave();tRender()});
+$('tlReset').addEventListener('click',()=>{if(confirm('Reset the tap counter?')){TAL={sq:0,data:[[0,0]],hist:[]};tSave();tRender()}});
+tRender();
+
+/* ---------- REPLICATES ---------- */
+let REP=S.get('rep',[52,61,48,58]);
+function stats(a){const n=a.length,mean=a.reduce((x,y)=>x+y,0)/n;const sd=n>1?Math.sqrt(a.reduce((x,y)=>x+(y-mean)*(y-mean),0)/(n-1)):0;return {n,mean,sd,cv:mean?sd/mean*100:NaN,sum:a.reduce((x,y)=>x+y,0),min:Math.min(...a),max:Math.max(...a)}}
+function repRender(){$('repRows').innerHTML=REP.map((v,i)=>`<div class="inp"><input inputmode="decimal" data-rep="${i}" value="${v==null?'':v}" placeholder="#${i+1}"><span class="u"></span></div>`).join('')}
+function calcRep(){
+  const a=REP.map(Number).filter(x=>isFinite(x)&&x>0);
+  if(a.length<2){render('res-rep',{title:'Replicates',label:'Spread',primary:'—',sub:'Enter at least two squares.'});return}
+  const st=stats(a);const notes=[];
+  if(st.cv>20)notes.push({t:`CV ${sig(st.cv,2)} % is high. Re-mix the sample and reload the chamber, or exclude an outlier square (${st.min} and ${st.max} are the extremes).`,cls:'crit'});
+  else if(st.cv>10)notes.push({t:`CV ${sig(st.cv,2)} % is acceptable but on the uneven side.`});
+  else notes.push({t:`CV ${sig(st.cv,2)} %: even loading.`,cls:'good'});
+  const sem=st.sd/Math.sqrt(st.n);
+  render('res-rep',{title:'Replicate squares',label:'Mean per square',primary:sig(st.mean,4),unit:'± '+sig(st.sd,3)+' SD',sub:`n = ${st.n} · CV ${sig(st.cv,3)} % · range ${st.min}–${st.max}`,rows:[['Sum of all squares',st.sum],['SEM',sig(sem,3)],['95 % interval of the mean','± '+sig(1.96*sem,3)],['Poisson expectation for the mean','± '+sig(Math.sqrt(st.mean),3)+' per square'],['At Neubauer 0.1 µL, DF 2',cells(st.mean*2*1e4)+' /mL']],notes});
+}
+repRender();
+$('repAdd').addEventListener('click',()=>{if(REP.length<16){REP.push(null);S.set('rep',REP);repRender();calcRep()}});
+$('repDel').addEventListener('click',()=>{if(REP.length>2){REP.pop();S.set('rep',REP);repRender();calcRep()}});
+$('repRows').addEventListener('input',e=>{const i=+e.target.dataset.rep;const v=e.target.value.trim();REP[i]=v===''?null:Number(v);S.set('rep',REP);calcRep()});
+
+/* ---------- CONVERT ---------- */
+function calcConv(){
+  const c=cu('u_c','u_cu'),d=num('u_d'),vs=VESSELS[+$('u_vessel').value],v=vol('u_v','u_vu');
+  const rows=[['Concentration'],['cells/mL',full(c)],['×10⁶ cells/mL',sig(c/1e6,4)],['×10³ cells/mL',sig(c/1e3,4)],['cells/µL',sig(c/1e3,4)],['cells/L',cells(c*1000)],['scientific',cells(c)]];
+  if(vs&&vs[1]){rows.push(['Density × vessel']);rows.push([`${sig(d,4)} cells/cm² in ${vs[0]} (${vs[1]} cm²)`,cells(d*vs[1])+' cells']);rows.push([`at ${fvol(vs[2])} working volume`,cells(d*vs[1]/vs[2])+' /mL'])}
+  rows.push(['Volume'],['nL',sig(v*1e6,4)],['µL',sig(v*1e3,4)],['mL',sig(v,4)],['L',sig(v/1000,4)]);
+  render('res-conv',{title:'Conversion',label:'Concentration',primary:cells(c),unit:'cells/mL',sub:`${mil(c)} per mL`,rows});
+}
+
+/* ---------- VESSELS ---------- */
+function calcVessels(){
+  const d=num('v_d');
+  $('vesselTable').innerHTML=`<tr><th>Vessel</th><th class="n">cm²</th><th class="n">Volume</th><th class="n">Cells @ density</th></tr>`+VESSELS.filter(v=>v[1]).map(v=>`<tr><td>${v[0].replace(' (per well)','')}</td><td class="n">${v[1]}</td><td class="n">${fvol(v[2])}</td><td class="n">${cells(d*v[1])}</td></tr>`).join('');
+}
+
+/* ---------- LOG ---------- */
+let LOG=S.get('log',[]);
+function logRender(){
+  const el=$('logList');
+  if(!LOG.length){el.innerHTML='<p class="small" style="padding:12px 0">Nothing saved yet. Every result panel has a “Save to log” button.</p>';return}
+  el.innerHTML=LOG.map((e,i)=>`<div class="log-item"><div class="t">${new Date(e.ts).toLocaleString()}</div><b>${esc(e.title)}</b>${e.note?`<div class="note-txt">${esc(e.note)}</div>`:''}<pre>${esc(e.text)}</pre><div class="actions"><button class="btn" data-copy="${i}">Copy</button><button class="btn danger" data-del="${i}">Delete</button></div></div>`).join('');
+}
+function logText(){return LOG.map(e=>`[${new Date(e.ts).toLocaleString()}] ${e.title}${e.note?' — '+e.note:''}\n${e.text}`).join('\n\n')}
+async function copy(t){try{await navigator.clipboard.writeText(t);toast('Copied')}catch(e){const ta=document.createElement('textarea');ta.value=t;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');toast('Copied')}catch(x){toast('Copy failed')}ta.remove()}}
+logRender();
+
+/* ---------- navigation ---------- */
+const TABS=['count','seed','dilute','grow','more'];
+function go(p){
+  document.querySelectorAll('.page').forEach(x=>x.classList.toggle('active',x.id==='page-'+p));
+  const tab=TABS.includes(p)?p:'more';
+  document.querySelectorAll('nav.tabs button').forEach(b=>{if(b.dataset.tab===tab)b.setAttribute('aria-current','page');else b.removeAttribute('aria-current')});
+  S.set('page',p);window.scrollTo(0,0);
+  if(p==='vessels')calcVessels();if(p==='log')logRender();if(p==='tally')tRender();
+}
+document.querySelectorAll('nav.tabs button').forEach(b=>b.addEventListener('click',()=>go(b.dataset.tab)));
+
+/* ---------- events ---------- */
+function recalc(){
+  try{calcCount()}catch(e){}
+  try{calcSeed()}catch(e){}try{calcFixed()}catch(e){}
+  try{calcC1V1()}catch(e){}try{calcSerial()}catch(e){}
+  try{calcPred()}catch(e){}try{calcTd()}catch(e){}
+  try{calcPass()}catch(e){}try{calcCryo()}catch(e){}
+  try{calcRep()}catch(e){}try{calcConv()}catch(e){}try{calcVessels()}catch(e){}
+}
+document.addEventListener('input',e=>{if(e.target.closest('.page')&&e.target.id){saveInputs();recalc()}});
+document.addEventListener('change',e=>{
+  const id=e.target.id;
+  if(id==='c_chamber')chamberSync();
+  if(id==='s_vessel')applyVessel('s_vessel','s_area','s_vol');
+  if(id==='p_vessel')applyVessel('p_vessel','p_area','p_vol');
+  if(id==='g_line')lineSync();
+  if(id==='c_vol'&&$('c_chamber').value!=='custom'){const v=num('c_vol');if(String(v)!==$('c_chamber').value.replace('b',''))$('c_chamber').value='custom'}
+  if(e.target.closest('.page')&&id){saveInputs();recalc()}
+});
+document.addEventListener('click',e=>{
+  const seg=e.target.closest('.seg button');
+  if(seg){const k=seg.parentElement.dataset.mode;MODES[k]=seg.dataset.v;seg.parentElement.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b===seg?'true':'false'));S.set('modes',MODES);if(k==='theme')applyTheme();recalc();return}
+  const g=e.target.closest('[data-go]');if(g){go(g.dataset.go);return}
+  const lg=e.target.closest('[data-log]');if(lg){const r=LAST[lg.dataset.log];if(!r)return;const note=prompt('Note for this entry (optional):','')||'';LOG.unshift({ts:Date.now(),title:r.title,text:r.text,note});if(LOG.length>300)LOG.length=300;S.set('log',LOG);toast('Saved to log');return}
+  const cp=e.target.closest('[data-copy]');if(cp){const en=LOG[+cp.dataset.copy];copy(`${en.title}${en.note?' — '+en.note:''}\n${en.text}`);return}
+  const dl=e.target.closest('[data-del]');if(dl){LOG.splice(+dl.dataset.del,1);S.set('log',LOG);logRender();return}
+  const a=e.target.closest('[data-act]');if(!a)return;const act=a.dataset.act;
+  if(act==='useCount'){const r=calcCount();setConc('s_c','s_cu',r.cLive);if(isFinite(r.cLive*r.susp))setCount('s_avail','s_availu',r.cLive*r.susp);toast('Stock set from count')}
+  if(act==='useCountTotal'){const r=calcCount();setCount('p_total','p_totalu',r.cLive*r.susp);setVal('p_resus',r.susp);toast('Harvest set from count')}
+  if(act==='useCountCryo'){const r=calcCount();setConc('k_c','k_cu',r.cLive);setCount('k_avail','k_availu',r.cLive*r.susp);toast('Set from count')}
+  if(act==='useTd'){const td=calcTd();if(isFinite(td)&&td>0){setVal('g_td',sig(td,4).replace(/,/g,''));$('g_line').value=0;go('grow');toast('Doubling time applied')}}
+  if(act==='clearV1'){setVal('d_v1','')}if(act==='clearV2'){setVal('d_v2','')}if(act==='clearC1'){setVal('d_c1','')}if(act==='clearC2'){setVal('d_c2','')}
+  if(act.startsWith('clear')){['d_c1','d_v1','d_c2','d_v2'].forEach(i=>{if(i!==({clearV1:'d_v1',clearV2:'d_v2',clearC1:'d_c1',clearC2:'d_c2'})[act]&&!isFinite(num(i)))setVal(i,i==='d_v1'?'1':i==='d_v2'?'10':'1')})}
+  if(act==='tallyToCount'){const L=TAL.data.reduce((x,y)=>x+y[0],0),D=TAL.data.reduce((x,y)=>x+y[1],0);const sq=TAL.data.filter((x,i)=>x[0]+x[1]>0).length||1;setVal('c_live',L);setVal('c_dead',D);setVal('c_sq',sq);go('count');toast(`${L} live, ${D} dead over ${sq} squares`)}
+  if(act==='tallyToRep'){REP=TAL.data.map(x=>x[0]+x[1]).filter(x=>x>0);if(REP.length<2)REP.push(null);S.set('rep',REP);repRender();go('rep')}
+  if(act==='repToCount'){const a=REP.map(Number).filter(x=>isFinite(x)&&x>0);if(a.length){const st=stats(a);setVal('c_live',st.sum);setVal('c_dead',0);setVal('c_sq',st.n);go('count');toast(`${st.sum} cells over ${st.n} squares`)}}
+  if(act==='copyLog'){copy(logText())}
+  if(act==='shareLog'){if(navigator.share){navigator.share({title:'CellBench log',text:logText()}).catch(()=>{})}else copy(logText())}
+  if(act==='clearLog'){if(confirm('Delete all log entries?')){LOG=[];S.set('log',LOG);logRender();toast('Log cleared')}}
+  if(act==='resetInputs'){if(confirm('Reset every input to the example values?')){Object.keys(DEFAULTS).forEach(k=>setVal(k,DEFAULTS[k]));MODES={theme:MODES.theme,haptic:MODES.haptic};document.querySelectorAll('.seg').forEach(seg=>{const k=seg.dataset.mode;if(!MODES[k]){const f=seg.querySelector('button');MODES[k]=f.dataset.v}seg.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed',b.dataset.v===MODES[k]?'true':'false'))});S.set('modes',MODES);toast('Inputs reset')}}
+  if(act==='hideInstall'){S.set('installHidden',true);$('installTip').hidden=true}
+  saveInputs();recalc();
+});
+
+/* ---------- install hint ---------- */
+(function(){
+  const standalone=window.matchMedia('(display-mode: standalone)').matches||navigator.standalone===true;
+  if(standalone||S.get('installHidden',false))return;
+  const ua=navigator.userAgent;const ios=/iPhone|iPad|iPod/.test(ua);const android=/Android/.test(ua);
+  $('installText').textContent=ios?'In Safari tap Share, then “Add to Home Screen”. It then opens full-screen like a normal app.':android?'In Chrome tap the ⋮ menu, then “Install app” or “Add to Home screen”.':'Open this link on your phone and add it to the home screen for an app-style icon.';
+  $('installTip').hidden=false;
+})();
+
+/* ---------- clock ---------- */
+function clock(){$('hdrClock').textContent=new Date().toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'})}
+clock();setInterval(clock,30000);
+
+recalc();
+go(S.get('page','count'));
+if('serviceWorker' in navigator&&location.protocol==='https:'){navigator.serviceWorker.register('sw.js').catch(function(){})}
+})();
+</script>
+</body>
+</html>
